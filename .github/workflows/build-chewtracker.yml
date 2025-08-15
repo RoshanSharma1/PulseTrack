@@ -23,5 +23,4 @@ jobs:
       - name: Build watchOS app
         run: |
           cd ChewTracker
-          xcodebuild clean build -project ChewTracker.xcodeproj -scheme "ChewTracker" -destination "platform=watchOS Simulator,name=Apple Watch Series 9 (45mm)" CODE_SIGNING_ALLOWED=NO
-
+          xcodebuild clean build -project ChewTracker.xcodeproj -scheme "ChewTracker" -destination "platform=watchOS Simulator,name=Apple Watch Series 7 (45mm),OS=10.5" CODE_SIGNING_ALLOWED=NO
