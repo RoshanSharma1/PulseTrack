@@ -1,0 +1,27 @@
+name: Build ChewTracker
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build ChewTracker
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      
+      - name: Build watchOS app
+        run: |
+          cd ChewTracker
+          xcodebuild clean build -project ChewTracker.xcodeproj -scheme "ChewTracker" -destination "platform=watchOS Simulator,name=Apple Watch Series 9 (45mm)" CODE_SIGNING_ALLOWED=NO
+
