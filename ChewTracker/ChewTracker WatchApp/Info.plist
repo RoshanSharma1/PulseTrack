@@ -29,10 +29,37 @@
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>
 	<string>com.pulsetrack.ChewTracker</string>
+	
+	<!-- Health Kit -->
 	<key>NSHealthShareUsageDescription</key>
 	<string>ChewTracker needs access to your health data to track your meal information.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>ChewTracker needs permission to save your meal data to HealthKit.</string>
+	
+	<!-- Location Services -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>ChewTracker uses your location to detect when you're at a restaurant and suggest meal tracking.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>ChewTracker uses your location to detect when you're at a restaurant and suggest meal tracking.</string>
+	
+	<!-- Microphone for Voice Feedback -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ChewTracker uses the microphone to provide voice feedback during your meals.</string>
+	
+	<!-- Motion Usage -->
+	<key>NSMotionUsageDescription</key>
+	<string>ChewTracker uses motion data to detect chewing patterns during meals.</string>
+	
+	<!-- Background Modes -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>location</string>
+	</array>
+	<key>WKBackgroundModes</key>
+	<array>
+		<string>workout-processing</string>
+	</array>
 </dict>
 </plist>
 
