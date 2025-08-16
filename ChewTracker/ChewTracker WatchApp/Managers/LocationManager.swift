@@ -13,6 +13,10 @@ class LocationManager: NSObject, ObservableObject {
     @Published var nearbyRestaurants: [Restaurant] = []
     @Published var lastCheckedLocation: CLLocation?
     
+    var isAuthorized: Bool {
+        return locationStatus == .authorizedWhenInUse || locationStatus == .authorizedAlways
+    }
+    
     @AppStorage("locationTrackingEnabled") var locationTrackingEnabled: Bool = true
     @AppStorage("automaticRestaurantDetection") var automaticRestaurantDetection: Bool = true
     @AppStorage("restaurantCheckFrequency") var restaurantCheckFrequency: Double = 5 // minutes
@@ -34,6 +38,19 @@ class LocationManager: NSObject, ObservableObject {
         if locationTrackingEnabled {
             startLocationUpdates()
         }
+        
+        // Add sample restaurants for testing
+        #if DEBUG
+        addSampleRestaurants()
+        #endif
+    }
+    
+    private func addSampleRestaurants() {
+        nearbyRestaurants = [
+            Restaurant(id: UUID(), name: "Healthy Bites Cafe", address: "123 Main St", distance: 150, latitude: 0, longitude: 0),
+            Restaurant(id: UUID(), name: "Green Garden Restaurant", address: "456 Oak Ave", distance: 300, latitude: 0, longitude: 0),
+            Restaurant(id: UUID(), name: "Fresh & Tasty", address: "789 Pine Blvd", distance: 450, latitude: 0, longitude: 0)
+        ]
     }
     
     // MARK: - Location Management
@@ -170,4 +187,3 @@ extension LocationManager: CLLocationManagerDelegate {
         print("Location manager failed with error: \(error.localizedDescription)")
     }
 }
-
