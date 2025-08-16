@@ -174,25 +174,7 @@ class NotificationManager: ObservableObject {
     }
 }
 
-// Restaurant model
-struct Restaurant: Identifiable, Codable {
-    var id: String
-    var name: String
-    var address: String
-    var distance: Double
-    var rating: Double?
-    var priceLevel: Int?
-    var cuisine: String?
-    
-    var formattedDistance: String {
-        if distance < 1000 {
-            return "\(Int(distance))m"
-        } else {
-            let kilometers = distance / 1000
-            return String(format: "%.1fkm", kilometers)
-        }
-    }
-}
+// Import Restaurant model from Models/Restaurant.swift
 
 @main
 struct ChewTrackerApp: App {
@@ -220,4 +202,3 @@ struct ChewTrackerApp: App {
         }
     }
 }
-

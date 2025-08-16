@@ -136,6 +136,11 @@ class VoiceFeedbackManager: NSObject, ObservableObject {
         }
     }
     
+    // Method to provide feedback for specific meal duration milestones
+    func provideFeedbackForMealDuration(minutes: Int) {
+        provideFeedbackForMealDuration(minutes)
+    }
+    
     // Stop any ongoing speech
     func stopSpeaking() {
         synthesizer.stopSpeaking(at: .immediate)
@@ -146,4 +151,3 @@ class VoiceFeedbackManager: NSObject, ObservableObject {
         return AVSpeechSynthesisVoice.speechVoices().compactMap { $0.language }
     }
 }
-
