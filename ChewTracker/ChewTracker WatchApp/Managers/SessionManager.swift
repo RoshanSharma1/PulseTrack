@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import SwiftUI
 
 class SessionManager: ObservableObject {
     @Published var isSessionActive = false
