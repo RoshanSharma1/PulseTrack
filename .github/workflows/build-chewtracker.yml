@@ -20,6 +20,10 @@ jobs:
         with:
           xcode-version: latest-stable
       
+      - name: List available simulators
+        run: |
+          xcrun simctl list
+
       - name: List available schemes
         run: |
           cd ChewTracker
@@ -28,10 +32,12 @@ jobs:
       - name: Build watchOS app
         run: |
           cd ChewTracker
-          # Try to build with the scheme
-          xcodebuild clean build -project ChewTracker.xcodeproj -scheme "ChewTracker" -destination "platform=watchOS Simulator,name=Apple Watch Series 7 (45mm),OS=10.5" CODE_SIGNING_ALLOWED=NO || \
+          # Try to build with the scheme for watchOS 9
+          xcodebuild clean build -project ChewTracker.xcodeproj -scheme "ChewTracker" -destination "platform=watchOS Simulator,name=Apple Watch Series 7 (45mm)" CODE_SIGNING_ALLOWED=NO || \
+          # Try to build with the scheme for watchOS 10
+          xcodebuild clean build -project ChewTracker.xcodeproj -scheme "ChewTracker" -destination "platform=watchOS Simulator,name=Apple Watch Series 9 (45mm)" CODE_SIGNING_ALLOWED=NO || \
           # If that fails, try building without specifying a scheme
-          xcodebuild clean build -project ChewTracker.xcodeproj -destination "platform=watchOS Simulator,name=Apple Watch Series 7 (45mm),OS=10.5" CODE_SIGNING_ALLOWED=NO || \
+          xcodebuild clean build -project ChewTracker.xcodeproj -destination "generic/platform=watchOS" CODE_SIGNING_ALLOWED=NO || \
           # If that fails too, try building with the target
-          xcodebuild clean build -project ChewTracker.xcodeproj -target "ChewTracker" -destination "platform=watchOS Simulator,name=Apple Watch Series 7 (45mm),OS=10.5" CODE_SIGNING_ALLOWED=NO
+          xcodebuild clean build -project ChewTracker.xcodeproj -target "ChewTracker" -destination "generic/platform=watchOS" CODE_SIGNING_ALLOWED=NO
 
