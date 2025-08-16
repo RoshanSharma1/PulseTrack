@@ -1,26 +1,5 @@
 import SwiftUI
 
-// Define HapticPattern enum if it's not defined elsewhere
-enum HapticPattern: String, CaseIterable, Identifiable {
-    case gentle = "Gentle"
-    case moderate = "Moderate"
-    case intense = "Intense"
-    case escalating = "Escalating"
-    case pulsing = "Pulsing"
-    
-    var id: String { self.rawValue }
-    
-    var description: String {
-        switch self {
-        case .gentle: return "Subtle vibration"
-        case .moderate: return "Medium intensity"
-        case .intense: return "Strong vibration"
-        case .escalating: return "Gradually increases"
-        case .pulsing: return "Rhythmic pattern"
-        }
-    }
-}
-
 struct SettingsView: View {
     @AppStorage("chewingThreshold") private var chewingThreshold = 30
     @AppStorage("hapticFeedbackEnabled") private var hapticFeedbackEnabled = true

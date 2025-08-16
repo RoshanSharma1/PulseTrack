@@ -36,7 +36,7 @@ struct MealSessionView: View {
                         Text("Total Chews")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        Text("\(sessionManager.totalChews)")
+                        Text("\(sessionManager.currentChewCount)")
                             .font(.title2)
                             .fontWeight(.bold)
                     }
@@ -70,13 +70,13 @@ struct MealSessionView: View {
                         
                         feedbackIndicator(
                             icon: "waveform.path.ecg",
-                            enabled: hapticManager.currentPattern != .gentle,
+                            enabled: true,
                             label: "Haptic"
                         )
                         
                         feedbackIndicator(
                             icon: "mic.fill",
-                            enabled: voiceFeedbackManager.currentVoiceStyle != .calm,
+                            enabled: true,
                             label: "Voice"
                         )
                     }

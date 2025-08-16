@@ -69,13 +69,10 @@ struct StartSessionView: View {
         }
         .onAppear {
             // Check if we're near a restaurant
-            if locationManager.locationTrackingEnabled && locationManager.automaticRestaurantDetection {
-                locationManager.checkForRestaurants()
-                isNearRestaurant = locationManager.isInRestaurant
-            }
+            checkForRestaurants()
         }
-        .onChange(of: locationManager.isInRestaurant) { newValue in
-            isNearRestaurant = newValue
+        .onChange(of: locationManager.nearbyRestaurants.isEmpty) { _, isEmpty in
+            isNearRestaurant = !isEmpty
         }
     }
     
@@ -97,7 +94,12 @@ struct StartSessionView: View {
             
             HStack {
                 Button(action: {
-                    sessionManager.startSession()
+                    if let restaurant = locationManager.nearbyRestaurants.first {
+                        sessionManager.setCurrentRestaurant(restaurant)
+                        sessionManager.startSession(title: "Meal at \(restaurant.name)")
+                    } else {
+                        sessionManager.startSession()
+                    }
                 }) {
                     Text("Start Tracking")
                         .font(.caption)
@@ -126,6 +128,16 @@ struct StartSessionView: View {
         .cornerRadius(10)
         .transition(.opacity)
         .animation(.easeInOut, value: isNearRestaurant)
+    }
+    
+    private func checkForRestaurants() {
+        // In a real app, this would use the LocationManager to check for nearby restaurants
+        // For now, we'll just simulate this functionality
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            // This is just a placeholder - in a real app, the LocationManager would
+            // actually populate the nearbyRestaurants array
+            isNearRestaurant = !locationManager.nearbyRestaurants.isEmpty
+        }
     }
 }
 

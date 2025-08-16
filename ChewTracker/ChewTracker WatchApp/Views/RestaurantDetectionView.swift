@@ -1,203 +1,124 @@
 import SwiftUI
-import CoreLocation
-import Combine
 
 struct RestaurantDetectionView: View {
+    @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var sessionManager: SessionManager
-    @StateObject private var locationManager = LocationManager()
-    @StateObject private var googleMapsService = GoogleMapsService()
-    
-    @State private var nearbyRestaurants: [Restaurant] = []
     @State private var isLoading = false
-    @State private var errorMessage: String?
-    @State private var cancellables = Set<AnyCancellable>()
+    @State private var showingStartConfirmation = false
+    @State private var selectedRestaurant: Restaurant?
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 15) {
-                // Header
-                Text("Nearby Restaurants")
-                    .font(.headline)
-                    .padding(.top)
-                
-                if isLoading {
-                    ProgressView()
-                        .padding()
-                    
-                    Text("Searching for restaurants...")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                } else if let error = errorMessage {
-                    Text("Error: \(error)")
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .padding()
-                    
-                    Button(action: {
-                        fetchNearbyRestaurants()
-                    }) {
-                        Text("Retry")
-                            .font(.headline)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                } else if nearbyRestaurants.isEmpty {
-                    Text("No restaurants found nearby")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .padding()
-                    
-                    Button(action: {
-                        fetchNearbyRestaurants()
-                    }) {
-                        Text("Refresh")
-                            .font(.headline)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                } else {
-                    // Restaurant List
-                    ForEach(nearbyRestaurants) { restaurant in
-                        RestaurantRow(restaurant: restaurant) {
-                            // Start meal tracking for this restaurant
-                            sessionManager.startSession()
-                        }
-                    }
-                }
-                
-                // Manual Start Button
-                Button(action: {
-                    sessionManager.startSession()
-                }) {
-                    HStack {
-                        Image(systemName: "fork.knife")
-                            .font(.headline)
-                        Text("Start Tracking Anyway")
-                            .font(.headline)
-                    }
+        VStack {
+            if isLoading {
+                ProgressView("Detecting restaurants...")
                     .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.green)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                }
-                .padding(.top)
-            }
-            .padding(.horizontal)
-        }
-        .onAppear {
-            // Request location permissions if needed
-            if locationManager.locationStatus == nil {
-                locationManager.requestLocationPermission()
-            }
-            
-            // Fetch nearby restaurants
-            fetchNearbyRestaurants()
-        }
-    }
-    
-    private func fetchNearbyRestaurants() {
-        guard let location = locationManager.currentLocation else {
-            errorMessage = "Location not available"
-            return
-        }
-        
-        isLoading = true
-        errorMessage = nil
-        
-        googleMapsService.searchNearbyRestaurants(location: location)
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { completion in
-                    isLoading = false
+            } else if locationManager.nearbyRestaurants.isEmpty {
+                VStack(spacing: 15) {
+                    Image(systemName: "location.slash.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(.secondary)
                     
-                    if case .failure(let error) = completion {
-                        errorMessage = error.localizedDescription
-                    }
-                },
-                receiveValue: { restaurants in
-                    // Sort restaurants by distance
-                    self.nearbyRestaurants = restaurants.map { restaurant in
-                        var updatedRestaurant = restaurant
-                        updatedRestaurant.updateDistance(from: location)
-                        return updatedRestaurant
-                    }.sorted { ($0.distanceInMeters ?? 0) < ($1.distanceInMeters ?? 0) }
-                    
-                    isLoading = false
-                }
-            )
-            .store(in: &cancellables)
-    }
-}
-
-struct RestaurantRow: View {
-    let restaurant: Restaurant
-    let onStartTracking: () -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(restaurant.name)
+                    Text("No restaurants found nearby")
                         .font(.headline)
-                        .lineLimit(1)
                     
-                    if let cuisineType = restaurant.cuisineType {
-                        Text(cuisineType.capitalized)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    Text("You can still start a meal without a location")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                    
+                    Button(action: {
+                        // Refresh restaurant detection
+                        detectRestaurants()
+                    }) {
+                        Label("Retry Detection", systemImage: "arrow.clockwise")
                     }
-                    
-                    HStack(spacing: 5) {
-                        Text(restaurant.formattedDistance)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        
-                        if let rating = restaurant.rating {
-                            HStack(spacing: 1) {
-                                Image(systemName: "star.fill")
-                                    .font(.caption2)
-                                    .foregroundColor(.yellow)
-                                Text(String(format: "%.1f", rating))
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
+                    .buttonStyle(.bordered)
+                    .padding(.top)
+                }
+                .padding()
+            } else {
+                List {
+                    Section(header: Text("Nearby Restaurants")) {
+                        ForEach(locationManager.nearbyRestaurants) { restaurant in
+                            Button(action: {
+                                selectedRestaurant = restaurant
+                                showingStartConfirmation = true
+                            }) {
+                                HStack {
+                                    VStack(alignment: .leading) {
+                                        Text(restaurant.name)
+                                            .font(.headline)
+                                        
+                                        Text(restaurant.address)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Text(restaurant.formattedDistance)
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                }
                             }
                         }
-                        
-                        if let priceLevel = restaurant.priceLevel {
-                            Text(String(repeating: "$", count: priceLevel))
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                    }
+                    
+                    Section {
+                        Button(action: {
+                            // Start meal without restaurant
+                            sessionManager.setCurrentRestaurant(nil)
+                            sessionManager.startSession()
+                        }) {
+                            Text("Start without location")
+                                .foregroundColor(.blue)
                         }
                     }
                 }
-                
-                Spacer()
-                
-                Button(action: onStartTracking) {
-                    Image(systemName: "fork.knife")
-                        .font(.headline)
-                        .padding(8)
-                        .background(Color.green)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
+                .alert(isPresented: $showingStartConfirmation) {
+                    Alert(
+                        title: Text("Start Meal"),
+                        message: Text("Start tracking your meal at \(selectedRestaurant?.name ?? "this restaurant")?"),
+                        primaryButton: .default(Text("Start")) {
+                            if let restaurant = selectedRestaurant {
+                                sessionManager.setCurrentRestaurant(restaurant)
+                                sessionManager.startSession(title: "Meal at \(restaurant.name)")
+                            }
+                        },
+                        secondaryButton: .cancel()
+                    )
                 }
             }
         }
-        .padding()
-        .background(Color.gray.opacity(0.2))
-        .cornerRadius(10)
+        .navigationTitle("Restaurant")
+        .onAppear {
+            detectRestaurants()
+        }
+    }
+    
+    private func detectRestaurants() {
+        isLoading = true
+        
+        // Simulate restaurant detection (in a real app, this would use the LocationManager)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            // This is just a placeholder - in a real app, the LocationManager would
+            // actually populate the nearbyRestaurants array
+            isLoading = false
+        }
     }
 }
 
 struct RestaurantDetectionView_Previews: PreviewProvider {
     static var previews: some View {
-        RestaurantDetectionView()
-            .environmentObject(SessionManager())
+        let locationManager = LocationManager()
+        // Add sample data for preview
+        
+        return NavigationView {
+            RestaurantDetectionView()
+                .environmentObject(locationManager)
+                .environmentObject(SessionManager())
+        }
     }
 }
 
