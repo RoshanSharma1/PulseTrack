@@ -15,7 +15,7 @@ struct ContentView: View {
             }
             .navigationTitle("ChewTracker")
         }
-        .onChange(of: sessionManager.isSessionActive) { newValue in
+        .onChange(of: sessionManager.isSessionActive) { _, newValue in
             isSessionActive = newValue
         }
     }
