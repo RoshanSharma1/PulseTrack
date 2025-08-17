@@ -60,4 +60,3 @@ struct Restaurant: Identifiable, Codable, Equatable {
         )
     ]
 }
-

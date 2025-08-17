@@ -105,4 +105,3 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         // In a real app, this might update a database or other state
     }
 }
-

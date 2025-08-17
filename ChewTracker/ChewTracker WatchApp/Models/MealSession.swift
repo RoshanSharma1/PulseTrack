@@ -45,12 +45,11 @@ struct MealSession: Identifiable, Codable {
     }
     
     var chewingQualityDescription: String {
-        let avg = averageChewsPerMinute
-        if avg > 35 {
+        if averageChewsPerMinute > 35 {
             return "Too Fast"
-        } else if avg > 25 {
+        } else if averageChewsPerMinute > 25 {
             return "Somewhat Fast"
-        } else if avg > 15 {
+        } else if averageChewsPerMinute > 15 {
             return "Good Pace"
         } else if avg > 0 {
             return "Excellent Pace"

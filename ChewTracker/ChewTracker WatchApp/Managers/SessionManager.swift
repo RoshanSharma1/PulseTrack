@@ -8,7 +8,8 @@ class SessionManager: ObservableObject {
     @Published var currentChewCount = 0
     @Published var chewsPerMinute = 0
     @Published var mealHistory: [MealSession] = []
-    @Published var currentRestaurant: Restaurant?
+    @Published var currentRestaurant: Restaurant? = nil
+    @Published var chewsPerMinuteData: [Int] = []
     
     // Private properties
     private var sessionStartTime: Date?
@@ -180,6 +181,7 @@ class SessionManager: ObservableObject {
             
             // Reset the chews per minute counter
             self.chewsPerMinute = 0
+
         }
         
         // Also start a timer to update chews per minute more frequently
@@ -201,6 +203,25 @@ class SessionManager: ObservableObject {
         if elapsedMinutes > 0 {
             chewsPerMinute = Int(Double(currentChewCount) / elapsedMinutes)
         }
+    }
+    
+    private func updateChewsPerMinute() {
+        // Simple calculation based on recent chews
+        // In a real implementation, this would use a sliding window
+        guard let startTime = sessionStartTime else { return }
+        
+        let elapsedMinutes = Date().timeIntervalSince(startTime) / 60
+        if elapsedMinutes > 0 {
+            chewsPerMinute = Int(Double(currentChewCount) / elapsedMinutes)
+        }
+    }
+    
+    private func calculateAndStoreChewingRate() {
+        minuteCounter += 1
+        chewsPerMinuteData.append(chewsPerMinute)
+        
+        // Provide feedback based on chewing rate
+        voiceFeedbackManager.provideFeedbackForChewingRate(chewsPerMinute)
     }
     
     // MARK: - Persistence
