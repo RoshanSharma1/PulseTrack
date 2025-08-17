@@ -1,44 +1,19 @@
 import Foundation
 
 struct MealSession: Identifiable, Codable {
-    let id: UUID
-    let startTime: Date
-    let endTime: Date
-    let totalChews: Int
-    let chewsPerMinuteData: [Int] // Array of CPM for each minute
-    let notes: String?
-    let restaurantName: String?
-    let mealType: MealType?
+    var id = UUID()
+    var title: String
+    var startTime: Date
+    var endTime: Date?
+    var totalChews: Int
+    var chewsPerMinuteData: [Int] // Array of chews per minute for each minute of the meal
+    var restaurantName: String?
+    var notes: String?
     
-    enum MealType: String, Codable, CaseIterable {
-        case breakfast = "Breakfast"
-        case lunch = "Lunch"
-        case dinner = "Dinner"
-        case snack = "Snack"
-        case other = "Other"
-    }
-    
+    // Computed properties
     var duration: Int {
-        let seconds = endTime.timeIntervalSince(startTime)
-        return Int(seconds / 60)
-    }
-    
-    var averageChewsPerMinute: Int {
-        if chewsPerMinuteData.isEmpty {
-            return 0
-        }
-        return chewsPerMinuteData.reduce(0, +) / chewsPerMinuteData.count
-    }
-    
-    var maxChewsPerMinute: Int {
-        return chewsPerMinuteData.max() ?? 0
-    }
-    
-    var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: startTime)
+        let end = endTime ?? Date()
+        return Int(end.timeIntervalSince(startTime) / 60)
     }
     
     var formattedDuration: String {
@@ -52,24 +27,21 @@ struct MealSession: Identifiable, Codable {
         }
     }
     
-    var title: String {
-        if let restaurantName = restaurantName {
-            return "Meal at \(restaurantName)"
-        } else if let mealType = mealType {
-            return mealType.rawValue
-        } else {
-            // Determine meal type based on time of day
-            let hour = Calendar.current.component(.hour, from: startTime)
-            if hour >= 5 && hour < 11 {
-                return "Breakfast"
-            } else if hour >= 11 && hour < 15 {
-                return "Lunch"
-            } else if hour >= 17 && hour < 22 {
-                return "Dinner"
-            } else {
-                return "Meal"
-            }
-        }
+    var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: startTime)
+    }
+    
+    var averageChewsPerMinute: Int {
+        guard !chewsPerMinuteData.isEmpty else { return 0 }
+        let sum = chewsPerMinuteData.reduce(0, +)
+        return sum / chewsPerMinuteData.count
+    }
+    
+    var maxChewsPerMinute: Int {
+        return chewsPerMinuteData.max() ?? 0
     }
     
     var chewingQualityDescription: String {
@@ -80,69 +52,60 @@ struct MealSession: Identifiable, Codable {
             return "Somewhat Fast"
         } else if avg > 15 {
             return "Good Pace"
-        } else {
+        } else if avg > 0 {
             return "Excellent Pace"
+        } else {
+            return "No Data"
         }
     }
     
-    // Initializer with optional parameters
-    init(id: UUID, startTime: Date, endTime: Date, totalChews: Int, chewsPerMinuteData: [Int], notes: String? = nil, restaurantName: String? = nil, mealType: MealType? = nil) {
-        self.id = id
-        self.startTime = startTime
-        self.endTime = endTime
-        self.totalChews = totalChews
-        self.chewsPerMinuteData = chewsPerMinuteData
-        self.notes = notes
-        self.restaurantName = restaurantName
-        self.mealType = mealType
-    }
-    
-    // Sample data for previews
-    static var sampleMeal: MealSession {
+    // Sample data for previews and testing
+    static var sampleMeals: [MealSession] = [
         MealSession(
-            id: UUID(),
-            startTime: Date().addingTimeInterval(-3600),
-            endTime: Date(),
+            title: "Lunch",
+            startTime: Calendar.current.date(byAdding: .hour, value: -3, to: Date())!,
+            endTime: Calendar.current.date(byAdding: .hour, value: -2, to: Date()),
             totalChews: 245,
-            chewsPerMinuteData: [28, 32, 25, 30, 22, 18],
-            notes: "Salad and sandwich",
-            restaurantName: "Healthy Bites Café",
-            mealType: .lunch
+            chewsPerMinuteData: [28, 32, 25, 22, 18, 15],
+            restaurantName: "Green Leaf Cafe",
+            notes: "Felt rushed at the beginning but slowed down after the reminder."
+        ),
+        MealSession(
+            title: "Breakfast",
+            startTime: Calendar.current.date(byAdding: .day, value: -1, to: Date())!,
+            endTime: Calendar.current.date(byAdding: .day, value: -1, to: Date())!.addingTimeInterval(25 * 60),
+            totalChews: 180,
+            chewsPerMinuteData: [20, 18, 15, 12, 10],
+            restaurantName: nil,
+            notes: "Oatmeal with fruits. Good pace throughout."
+        ),
+        MealSession(
+            title: "Dinner",
+            startTime: Calendar.current.date(byAdding: .day, value: -2, to: Date())!,
+            endTime: Calendar.current.date(byAdding: .day, value: -2, to: Date())!.addingTimeInterval(45 * 60),
+            totalChews: 320,
+            chewsPerMinuteData: [35, 30, 25, 20, 18, 15, 12, 10],
+            restaurantName: "Healthy Bites",
+            notes: "Started too fast but improved after the haptic feedback."
+        ),
+        MealSession(
+            title: "Lunch",
+            startTime: Calendar.current.date(byAdding: .day, value: -3, to: Date())!,
+            endTime: Calendar.current.date(byAdding: .day, value: -3, to: Date())!.addingTimeInterval(30 * 60),
+            totalChews: 210,
+            chewsPerMinuteData: [22, 20, 18, 15, 12],
+            restaurantName: nil,
+            notes: nil
+        ),
+        MealSession(
+            title: "Breakfast",
+            startTime: Calendar.current.date(byAdding: .day, value: -4, to: Date())!,
+            endTime: Calendar.current.date(byAdding: .day, value: -4, to: Date())!.addingTimeInterval(20 * 60),
+            totalChews: 150,
+            chewsPerMinuteData: [18, 15, 12, 10],
+            restaurantName: nil,
+            notes: "Quick breakfast but maintained good chewing pace."
         )
-    }
-    
-    static var sampleMeals: [MealSession] {
-        [
-            MealSession(
-                id: UUID(),
-                startTime: Date().addingTimeInterval(-3600),
-                endTime: Date(),
-                totalChews: 245,
-                chewsPerMinuteData: [28, 32, 25, 30, 22, 18],
-                notes: "Salad and sandwich",
-                restaurantName: "Healthy Bites Café",
-                mealType: .lunch
-            ),
-            MealSession(
-                id: UUID(),
-                startTime: Date().addingTimeInterval(-86400),
-                endTime: Date().addingTimeInterval(-86400 + 2700),
-                totalChews: 320,
-                chewsPerMinuteData: [22, 25, 28, 30, 25, 20, 18, 15, 12],
-                notes: "Steak with vegetables",
-                restaurantName: "Grill House",
-                mealType: .dinner
-            ),
-            MealSession(
-                id: UUID(),
-                startTime: Date().addingTimeInterval(-172800),
-                endTime: Date().addingTimeInterval(-172800 + 1800),
-                totalChews: 180,
-                chewsPerMinuteData: [35, 38, 32, 30, 25],
-                notes: "Oatmeal with fruits",
-                mealType: .breakfast
-            )
-        ]
-    }
+    ]
 }
 

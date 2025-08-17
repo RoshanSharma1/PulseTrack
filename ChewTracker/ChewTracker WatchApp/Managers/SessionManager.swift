@@ -1,157 +1,205 @@
 import Foundation
-import Combine
 import SwiftUI
+import CoreMotion
 
 class SessionManager: ObservableObject {
+    // Published properties
     @Published var isSessionActive = false
-    @Published var totalChews = 0
+    @Published var currentChewCount = 0
     @Published var chewsPerMinute = 0
     @Published var mealHistory: [MealSession] = []
     @Published var currentRestaurant: Restaurant?
     
-    private var startTime: Date?
+    // Private properties
+    private var sessionStartTime: Date?
+    private var sessionTitle: String = "Meal"
+    private var sessionNotes: String?
     private var chewsPerMinuteData: [Int] = []
-    private var motionManager: MotionManager?
-    private var hapticManager = HapticManager()
-    private var soundManager = SoundManager()
-    private var voiceFeedbackManager = VoiceFeedbackManager()
-    private var timer: Timer?
+    private var lastChewTime: Date?
     private var minuteTimer: Timer?
-    private var currentMinuteChews = 0
-    private var elapsedTimeInMinutes = 0
+    private var motionManager = CMMotionManager()
+    private var chewDetectionThreshold = 0.8 // Acceleration threshold for chew detection
     
+    // Dependencies
+    private var hapticManager: HapticManager?
+    private var soundManager: SoundManager?
+    private var voiceFeedbackManager: VoiceFeedbackManager?
+    
+    // Settings
     @AppStorage("chewingThreshold") private var chewingThreshold = 30
-    @AppStorage("hapticFeedbackEnabled") private var hapticFeedbackEnabled = true
-    @AppStorage("soundEnabled") private var soundEnabled = true
-    @AppStorage("voiceFeedbackEnabled") private var voiceFeedbackEnabled = true
     
     init() {
+        // Load saved meal history
         loadMealHistory()
     }
     
-    func startSession(at restaurant: Restaurant? = nil) {
-        isSessionActive = true
-        startTime = Date()
-        totalChews = 0
+    // Set dependencies
+    func setDependencies(hapticManager: HapticManager, soundManager: SoundManager, voiceFeedbackManager: VoiceFeedbackManager) {
+        self.hapticManager = hapticManager
+        self.soundManager = soundManager
+        self.voiceFeedbackManager = voiceFeedbackManager
+    }
+    
+    // MARK: - Session Management
+    
+    func startSession(title: String? = nil) {
+        guard !isSessionActive else { return }
+        
+        sessionStartTime = Date()
+        sessionTitle = title ?? "Meal"
+        currentChewCount = 0
         chewsPerMinute = 0
         chewsPerMinuteData = []
-        currentMinuteChews = 0
-        elapsedTimeInMinutes = 0
-        currentRestaurant = restaurant
         
-        // Initialize and start motion detection
-        motionManager = MotionManager()
-        motionManager?.onChewDetected = { [weak self] in
-            self?.chewDetected()
-        }
-        motionManager?.startMonitoring()
-        
-        // Start minute timer for CPM calculation
+        startMotionUpdates()
         startMinuteTimer()
         
-        // Play start sound
-        if soundEnabled {
-            soundManager.playMealStartSound()
-        }
+        isSessionActive = true
     }
     
     func endSession() {
-        guard let startTime = startTime else { return }
+        guard isSessionActive, let startTime = sessionStartTime else { return }
         
-        isSessionActive = false
-        motionManager?.stopMonitoring()
-        timer?.invalidate()
-        minuteTimer?.invalidate()
+        let endTime = Date()
         
-        // Record current minute's chews before ending
-        if currentMinuteChews > 0 {
-            chewsPerMinuteData.append(currentMinuteChews)
-        }
-        
-        // Create and save meal session
+        // Create meal session record
         let meal = MealSession(
-            id: UUID(),
+            title: sessionTitle,
             startTime: startTime,
-            endTime: Date(),
-            totalChews: totalChews,
+            endTime: endTime,
+            totalChews: currentChewCount,
             chewsPerMinuteData: chewsPerMinuteData,
-            notes: nil,
-            restaurantName: currentRestaurant?.name
+            restaurantName: currentRestaurant?.name,
+            notes: sessionNotes
         )
         
-        // If we have a restaurant, update its visit count
-        if var restaurant = currentRestaurant {
-            restaurant.recordVisit()
-            // In a real app, we would save this updated restaurant data
-        }
-        
+        // Add to history and save
         mealHistory.append(meal)
         saveMealHistory()
         
-        // Play end sound
-        if soundEnabled {
-            soundManager.playMealEndSound()
-        }
+        // Clean up
+        stopMotionUpdates()
+        minuteTimer?.invalidate()
+        minuteTimer = nil
         
         // Reset state
-        self.startTime = nil
-        motionManager = nil
+        isSessionActive = false
         currentRestaurant = nil
+        sessionNotes = nil
+        
+        // Play success sound
+        soundManager?.playSuccessSound()
     }
     
-    private func chewDetected() {
-        DispatchQueue.main.async {
-            self.totalChews += 1
-            self.currentMinuteChews += 1
-            self.chewsPerMinute = self.currentMinuteChews
+    func pauseSession() {
+        stopMotionUpdates()
+    }
+    
+    func resumeSession() {
+        startMotionUpdates()
+    }
+    
+    func setCurrentRestaurant(_ restaurant: Restaurant?) {
+        currentRestaurant = restaurant
+    }
+    
+    func updateSessionNotes(_ notes: String) {
+        sessionNotes = notes
+    }
+    
+    // MARK: - Chew Detection
+    
+    private func startMotionUpdates() {
+        guard motionManager.isAccelerometerAvailable else { return }
+        
+        motionManager.accelerometerUpdateInterval = 0.1
+        motionManager.startAccelerometerUpdates(to: .main) { [weak self] data, error in
+            guard let self = self, let data = data, error == nil else { return }
             
-            // Check if chewing too fast and provide feedback
-            if self.chewsPerMinute > self.chewingThreshold {
-                // Haptic feedback
-                if self.hapticFeedbackEnabled {
-                    self.hapticManager.triggerWarningFeedback()
-                }
-                
-                // Sound feedback
-                if self.soundEnabled {
-                    self.soundManager.playWarningSound()
-                }
-                
-                // Voice feedback (less frequent)
-                if self.voiceFeedbackEnabled && self.chewsPerMinute > self.chewingThreshold + 5 {
-                    self.voiceFeedbackManager.provideFeedbackForChewingRate(self.chewsPerMinute)
-                }
-            } else if self.chewsPerMinute <= 20 && self.totalChews % 50 == 0 {
-                // Positive reinforcement for good chewing pace
-                if self.hapticFeedbackEnabled {
-                    self.hapticManager.triggerSuccessFeedback()
-                }
-                
-                if self.soundEnabled {
-                    self.soundManager.playSuccessSound()
-                }
+            // Simple chew detection algorithm
+            // In a real app, this would be more sophisticated, possibly using ML
+            let acceleration = sqrt(
+                pow(data.acceleration.x, 2) +
+                pow(data.acceleration.y, 2) +
+                pow(data.acceleration.z, 2)
+            )
+            
+            if acceleration > self.chewDetectionThreshold {
+                self.handleChewDetected()
             }
         }
     }
     
+    private func stopMotionUpdates() {
+        if motionManager.isAccelerometerActive {
+            motionManager.stopAccelerometerUpdates()
+        }
+    }
+    
+    private func handleChewDetected() {
+        // Debounce chew detection (don't count chews too close together)
+        let now = Date()
+        if let lastChewTime = lastChewTime, now.timeIntervalSince(lastChewTime) < 0.5 {
+            return
+        }
+        
+        currentChewCount += 1
+        lastChewTime = now
+        
+        // Provide haptic feedback for chew detection
+        hapticManager?.triggerChewDetectedFeedback()
+        
+        // Check if chewing too fast
+        if chewsPerMinute > chewingThreshold {
+            hapticManager?.triggerWarningFeedback()
+            soundManager?.playWarningSound()
+            voiceFeedbackManager?.provideFeedbackForChewingRate(chewsPerMinute)
+        }
+        
+        // Check meal duration for voice feedback
+        if let startTime = sessionStartTime {
+            let durationMinutes = Int(Date().timeIntervalSince(startTime) / 60)
+            if durationMinutes % 5 == 0 { // Every 5 minutes
+                voiceFeedbackManager?.provideFeedbackForMealDuration(durationMinutes)
+            }
+        }
+    }
+    
+    // MARK: - Timer Management
+    
     private func startMinuteTimer() {
+        // Reset the minute timer
+        minuteTimer?.invalidate()
+        
+        // Start a new timer that fires every minute
         minuteTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             
-            // Record the current minute's chews
-            self.chewsPerMinuteData.append(self.currentMinuteChews)
+            // Record chews for the last minute
+            self.chewsPerMinuteData.append(self.chewsPerMinute)
             
-            // Increment elapsed time
-            self.elapsedTimeInMinutes += 1
-            
-            // Provide feedback based on meal duration
-            if self.voiceFeedbackEnabled {
-                self.voiceFeedbackManager.provideFeedbackForMealDuration(self.elapsedTimeInMinutes)
-            }
-            
-            // Reset for the next minute
-            self.currentMinuteChews = 0
+            // Reset the chews per minute counter
             self.chewsPerMinute = 0
+        }
+        
+        // Also start a timer to update chews per minute more frequently
+        Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+            guard let self = self, self.isSessionActive else { return }
+            
+            // Calculate chews per minute based on recent activity
+            self.updateChewsPerMinute()
+        }
+    }
+    
+    private func updateChewsPerMinute() {
+        // This is a simplified calculation
+        // In a real app, this would use a rolling window of recent chews
+        
+        guard let startTime = sessionStartTime else { return }
+        
+        let elapsedMinutes = Date().timeIntervalSince(startTime) / 60
+        if elapsedMinutes > 0 {
+            chewsPerMinute = Int(Double(currentChewCount) / elapsedMinutes)
         }
     }
     
@@ -162,18 +210,35 @@ class SessionManager: ObservableObject {
             let data = try JSONEncoder().encode(mealHistory)
             UserDefaults.standard.set(data, forKey: "mealHistory")
         } catch {
-            print("Failed to save meal history: \(error)")
+            print("Failed to save meal history: \(error.localizedDescription)")
         }
     }
     
     private func loadMealHistory() {
-        guard let data = UserDefaults.standard.data(forKey: "mealHistory") else { return }
+        guard let data = UserDefaults.standard.data(forKey: "mealHistory") else {
+            // Use sample data if no saved history
+            mealHistory = MealSession.sampleMeals
+            return
+        }
         
         do {
             mealHistory = try JSONDecoder().decode([MealSession].self, from: data)
         } catch {
-            print("Failed to load meal history: \(error)")
+            print("Failed to load meal history: \(error.localizedDescription)")
+            mealHistory = MealSession.sampleMeals
         }
+    }
+    
+    // MARK: - History Management
+    
+    func deleteMeal(at indexSet: IndexSet) {
+        mealHistory.remove(atOffsets: indexSet)
+        saveMealHistory()
+    }
+    
+    func clearAllHistory() {
+        mealHistory = []
+        saveMealHistory()
     }
 }
 

@@ -2,77 +2,62 @@ import Foundation
 import CoreLocation
 
 struct Restaurant: Identifiable, Codable, Equatable {
-    var id: String
+    var id = UUID()
     var name: String
     var address: String
     var latitude: Double
     var longitude: Double
-    var cuisineType: String?
-    var rating: Double?
-    var priceLevel: Int?
-    var isOpen: Bool?
-    var distanceInMeters: Double?
-    var lastVisited: Date?
-    var visitCount: Int
+    var distance: Double? // Distance in meters from current location
     
-    // Computed property for location
-    var location: CLLocation {
-        return CLLocation(latitude: latitude, longitude: longitude)
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
     
-    // Formatted distance string
     var formattedDistance: String {
-        guard let distance = distanceInMeters else {
-            return "Unknown distance"
-        }
+        guard let distance = distance else { return "Unknown" }
         
         if distance < 1000 {
             return "\(Int(distance))m"
         } else {
             let kilometers = distance / 1000
-            return String(format: "%.1fkm", kilometers)
+            return String(format: "%.1f km", kilometers)
         }
     }
     
-    // Price level as dollar signs
-    var priceSymbols: String {
-        guard let priceLevel = priceLevel else {
-            return "Price unknown"
-        }
-        
-        return String(repeating: "$", count: priceLevel)
-    }
-    
-    // Initialize from Google Places API result
-    init(id: String, name: String, address: String, latitude: Double, longitude: Double, cuisineType: String? = nil, rating: Double? = nil, priceLevel: Int? = nil, isOpen: Bool? = nil) {
-        self.id = id
-        self.name = name
-        self.address = address
-        self.latitude = latitude
-        self.longitude = longitude
-        self.cuisineType = cuisineType
-        self.rating = rating
-        self.priceLevel = priceLevel
-        self.isOpen = isOpen
-        self.distanceInMeters = nil
-        self.lastVisited = nil
-        self.visitCount = 0
-    }
-    
-    // Update distance from a given location
-    mutating func updateDistance(from location: CLLocation) {
-        self.distanceInMeters = location.distance(from: self.location)
-    }
-    
-    // Record a visit to this restaurant
-    mutating func recordVisit() {
-        self.lastVisited = Date()
-        self.visitCount += 1
-    }
-    
-    // Equatable implementation
     static func == (lhs: Restaurant, rhs: Restaurant) -> Bool {
         return lhs.id == rhs.id
     }
+    
+    // Sample restaurants for preview and testing
+    static var samples: [Restaurant] = [
+        Restaurant(
+            name: "Green Leaf Cafe",
+            address: "123 Main St",
+            latitude: 37.7749,
+            longitude: -122.4194,
+            distance: 350
+        ),
+        Restaurant(
+            name: "Healthy Bites",
+            address: "456 Market St",
+            latitude: 37.7751,
+            longitude: -122.4196,
+            distance: 520
+        ),
+        Restaurant(
+            name: "Fresh & Tasty",
+            address: "789 Mission St",
+            latitude: 37.7752,
+            longitude: -122.4198,
+            distance: 780
+        ),
+        Restaurant(
+            name: "Organic Delights",
+            address: "101 Howard St",
+            latitude: 37.7753,
+            longitude: -122.4199,
+            distance: 950
+        )
+    ]
 }
 
