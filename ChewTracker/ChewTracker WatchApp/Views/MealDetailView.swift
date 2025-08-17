@@ -79,7 +79,7 @@ struct MealDetailView: View {
                     } else {
                         // Simple bar chart representation
                         HStack(alignment: .bottom, spacing: 2) {
-                            ForEach(0..<min(meal.chewsPerMinuteData.count, 10), id: \\.self) { index in
+                            ForEach(0..<min(meal.chewsPerMinuteData.count, 10), id: \.self) { index in
                                 let value = meal.chewsPerMinuteData[index]
                                 let maxValue = meal.chewsPerMinuteData.max() ?? 1
                                 let height = CGFloat(value) / CGFloat(maxValue) * 100
@@ -153,7 +153,7 @@ struct MealDetailView: View {
     
     private func qualityIndicator(for meal: MealSession) -> some View {
         HStack(spacing: 2) {
-            ForEach(0..<5, id: \\.self) { i in
+            ForEach(0..<5, id: \.self) { i in
                 Circle()
                     .fill(qualityColor(for: meal, index: i))
                     .frame(width: 10, height: 10)
