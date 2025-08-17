@@ -59,6 +59,22 @@ struct Restaurant: Identifiable, Codable, Equatable {
         self.visitCount = 0
     }
     
+    // Convenience initializer with UUID and distance
+    init(id: UUID, name: String, address: String, distance: Double, latitude: Double, longitude: Double) {
+        self.id = id.uuidString
+        self.name = name
+        self.address = address
+        self.latitude = latitude
+        self.longitude = longitude
+        self.distanceInMeters = distance
+        self.cuisineType = nil
+        self.rating = nil
+        self.priceLevel = nil
+        self.isOpen = true
+        self.lastVisited = nil
+        self.visitCount = 0
+    }
+    
     // Update distance from a given location
     mutating func updateDistance(from location: CLLocation) {
         self.distanceInMeters = location.distance(from: self.location)
@@ -75,4 +91,3 @@ struct Restaurant: Identifiable, Codable, Equatable {
         return lhs.id == rhs.id
     }
 }
-

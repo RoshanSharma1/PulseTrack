@@ -1,71 +1,77 @@
 import SwiftUI
+import CoreLocation
 
 struct LocationSettingsView: View {
+    @EnvironmentObject var locationManager: LocationManager
     @AppStorage("locationTrackingEnabled") private var locationTrackingEnabled = true
     @AppStorage("automaticRestaurantDetection") private var automaticRestaurantDetection = true
-    @AppStorage("restaurantCheckFrequency") private var restaurantCheckFrequency: Double = 5 // minutes
-    @Environment(\.presentationMode) var presentationMode
-    @StateObject private var locationManager = LocationManager()
+    @AppStorage("restaurantSearchRadius") private var searchRadius = 500.0
+    @AppStorage("saveVisitedRestaurants") private var saveVisitedRestaurants = true
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 15) {
-                Text("Location Services")
-                    .font(.headline)
-                    .padding(.top)
+        List {
+            Section(header: Text("Location Access")) {
+                HStack {
+                    Image(systemName: locationManager.isAuthorized ? "location.fill" : "location.slash.fill")
+                        .foregroundColor(locationManager.isAuthorized ? .green : .red)
+                    
+                    VStack(alignment: .leading) {
+                        Text(locationManager.isAuthorized ? "Location Access Granted" : "Location Access Denied")
+                            .font(.headline)
+                        
+                        Text(locationManager.isAuthorized ? 
+                             "ChewTracker can detect restaurants near you" : 
+                             "Enable location access in Settings")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
                 
-                Toggle("Enable Location Tracking", isOn: $locationTrackingEnabled)
-                    .onChange(of: locationTrackingEnabled) { newValue in
+                if !locationManager.isAuthorized {
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            WKExtension.shared().openSystemURL(url)
+                        }
+                    }
+                }
+            }
+            
+            Section(header: Text("Restaurant Detection")) {
+                Toggle("Enable Restaurant Detection", isOn: $automaticRestaurantDetection)
+                    .disabled(!locationManager.isAuthorized)
+                
+                if automaticRestaurantDetection && locationManager.isAuthorized {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Search Radius: \(Int(searchRadius))m")
+                            .font(.caption)
+                        
+                        Slider(value: $searchRadius, in: 100...1000, step: 100)
+                    }
+                    
+                    Toggle("Save Visited Restaurants", isOn: $saveVisitedRestaurants)
+                }
+            }
+            
+            Section(header: Text("Privacy")) {
+                Toggle("Location Tracking", isOn: $locationTrackingEnabled)
+                    .onChange(of: locationTrackingEnabled) { _, newValue in
                         locationManager.toggleLocationTracking(newValue)
                     }
                 
-                if locationTrackingEnabled {
-                    Toggle("Automatic Restaurant Detection", isOn: $automaticRestaurantDetection)
-                    
-                    VStack(alignment: .leading) {
-                        Text("Check Frequency")
-                            .font(.subheadline)
-                        
-                        Text("How often to check for restaurants")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Picker("Frequency", selection: $restaurantCheckFrequency) {
-                            Text("1 minute").tag(1.0)
-                            Text("5 minutes").tag(5.0)
-                            Text("10 minutes").tag(10.0)
-                            Text("15 minutes").tag(15.0)
-                            Text("30 minutes").tag(30.0)
-                        }
-                        .pickerStyle(WheelPickerStyle())
-                    }
-                    .padding(.vertical)
-                    
-                    Button("Request Location Permission") {
-                        locationManager.requestLocationPermission()
-                    }
-                    .buttonStyle(.bordered)
-                    .padding(.vertical)
-                }
-                
-                Divider()
-                    .padding(.vertical)
-                
-                Text("Privacy Information")
-                    .font(.headline)
-                
-                Text("Your location data is only used to detect when you're at a restaurant. No location data is stored or shared with third parties.")
+                Text("When disabled, no location data will be collected or stored")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Section(header: Text("Data Usage")) {
+                Text("Restaurant data is provided by Google Maps and is only used to enhance your meal tracking experience")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                Button("Done") {
-                    presentationMode.wrappedValue.dismiss()
-                }
-                .buttonStyle(.borderedProminent)
-                .frame(maxWidth: .infinity)
-                .padding(.top)
+                Text("Your location data never leaves your device")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-            .padding()
         }
         .navigationTitle("Location Settings")
     }
@@ -74,6 +80,7 @@ struct LocationSettingsView: View {
 struct LocationSettingsView_Previews: PreviewProvider {
     static var previews: some View {
         LocationSettingsView()
+            .environmentObject(LocationManager())
     }
 }
 

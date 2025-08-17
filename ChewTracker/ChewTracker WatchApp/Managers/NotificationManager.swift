@@ -11,12 +11,14 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
     @AppStorage("notificationQuietHoursStart") var quietHoursStart: Int = 22 // 10 PM
     @AppStorage("notificationQuietHoursEnd") var quietHoursEnd: Int = 8 // 8 AM
     
+    @Published var isAuthorized: Bool = false
+    
     private let notificationCenter = UNUserNotificationCenter.current()
     
     override init() {
         super.init()
         notificationCenter.delegate = self
-        requestAuthorization()
+        checkAuthorizationStatus()
     }
     
     // MARK: - Authorization
@@ -25,10 +27,19 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
         notificationCenter.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             DispatchQueue.main.async {
                 self.notificationsEnabled = granted
+                self.isAuthorized = granted
                 
                 if let error = error {
                     print("Notification authorization error: \(error.localizedDescription)")
                 }
+            }
+        }
+    }
+    
+    func checkAuthorizationStatus() {
+        notificationCenter.getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                self.isAuthorized = settings.authorizationStatus == .authorized
             }
         }
     }
@@ -228,4 +239,3 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
         notificationCenter.setNotificationCategories([restaurantCategory])
     }
 }
-
