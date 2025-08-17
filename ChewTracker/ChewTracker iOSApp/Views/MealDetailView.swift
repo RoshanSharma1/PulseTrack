@@ -170,8 +170,7 @@ struct DetailRowView: View {
 struct MealDetailView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
-            MealDetailView(meal: MealSession.sampleMeal)
+            MealDetailView(meal: MealSession.sampleMeals[0])
         }
     }
 }
-

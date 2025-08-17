@@ -5,6 +5,7 @@ import SwiftUI
 class SessionManager: ObservableObject {
     @Published var isSessionActive = false
     @Published var totalChews = 0
+    @Published var currentChewCount = 0
     @Published var chewsPerMinute = 0
     @Published var mealHistory: [MealSession] = []
     @Published var currentRestaurant: Restaurant?
@@ -29,15 +30,46 @@ class SessionManager: ObservableObject {
         loadMealHistory()
     }
     
+    func setCurrentRestaurant(_ restaurant: Restaurant?) {
+        currentRestaurant = restaurant
+    }
+    
     func startSession(at restaurant: Restaurant? = nil) {
         isSessionActive = true
         startTime = Date()
         totalChews = 0
+        currentChewCount = 0
         chewsPerMinute = 0
         chewsPerMinuteData = []
         currentMinuteChews = 0
         elapsedTimeInMinutes = 0
         currentRestaurant = restaurant
+        
+        // Initialize and start motion detection
+        motionManager = MotionManager()
+        motionManager?.onChewDetected = { [weak self] in
+            self?.chewDetected()
+        }
+        motionManager?.startMonitoring()
+        
+        // Start minute timer for CPM calculation
+        startMinuteTimer()
+        
+        // Play start sound
+        if soundEnabled {
+            soundManager.playMealStartSound()
+        }
+    }
+    
+    func startSession(title: String? = nil) {
+        isSessionActive = true
+        startTime = Date()
+        totalChews = 0
+        currentChewCount = 0
+        chewsPerMinute = 0
+        chewsPerMinuteData = []
+        currentMinuteChews = 0
+        elapsedTimeInMinutes = 0
         
         // Initialize and start motion detection
         motionManager = MotionManager()
@@ -102,6 +134,7 @@ class SessionManager: ObservableObject {
     private func chewDetected() {
         DispatchQueue.main.async {
             self.totalChews += 1
+            self.currentChewCount += 1
             self.currentMinuteChews += 1
             self.chewsPerMinute = self.currentMinuteChews
             
@@ -176,4 +209,3 @@ class SessionManager: ObservableObject {
         }
     }
 }
-
